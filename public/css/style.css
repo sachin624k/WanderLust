@@ -1,10 +1,17 @@
+/* Global layout */
+html, body {
+    margin: 0;
+    padding: 0;
+}
+
 body {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    min-height: 100vh;          /* page always at least full viewport height */
 }
 
+/* Main content container grows and pushes footer down */
 .container {
     flex: 1;
 }
@@ -25,6 +32,26 @@ body {
 }
 
 /* Footer */
+.f-info {
+    text-align: center;
+    background-color: #ebebeb;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;        /* vertically center items */
+    min-height: 8rem;           /* same tall footer on all pages */
+    padding: 1rem 0;
+}
+
+.f-info-links,
+.f-info-socials,
+.f-info-brand {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .f-info-links a {
     text-decoration: none;
     color: #222222;
@@ -34,32 +61,13 @@ body {
     text-decoration: underline;
 }
 
-.f-info-links, 
-.f-info-socials,
-.f-info-brand {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
 .f-info-socials i {
     font-size: 1.2rem;
     margin-top: 1rem;
 }
 
-.f-info {
-    text-align: center;
-    height: 8rem;
-    background-color: #ebebeb;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: space-evenly;
-}
-
-/* Cards */
-.card {
+/* Listing cards (index & reused on show) */
+.listing-card {
     border: none !important;
     box-shadow: none !important;
     background: transparent !important;
@@ -98,7 +106,7 @@ body {
     color: inherit;
 }
 
-/* Card Effect */
+/* Card hover effect */
 .card-img-overlay {
     opacity: 0;
     background-color: #222222;
@@ -110,19 +118,19 @@ body {
     box-shadow: 0 8px 16px;
 }
 
-/* New Page */
+/* New listing button */
 .add-btn {
     background-color: #fe424d !important;
     border: none !important;
 }
 
-/* Edit Page */
+/* Edit listing button */
 .edit-btn {
     background-color: #fe424d !important;
     border: none !important;
 }
 
-/* Show Page */
+/* Show page image/card */
 .show-img {
     height: 30vh;
     width: 100%;
