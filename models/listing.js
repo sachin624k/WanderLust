@@ -7,36 +7,33 @@ const listingSchema = new Schema({
         type: String,
         required: true,
     },
-    description: {
-        type: String,
-    },
+    description: String,
     image: {
         filename: String,
-        url : {
+        url: {
             type: String,
-            default: "https://images.unsplash.com/photo-1491555103944-7c647fd857e6?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-            set: (v) =>
-                v === ""
-            ?"https://images.unsplash.com/photo-1491555103944-7c647fd857e6?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-            : v,
+            default: "https://images.unsplash.com/photo-1491555103944-7c647fd857e6?q=80&w=2070&auto=format&fit=crop",
+            set: (v) => v === "" 
+                ? "https://images.unsplash.com/photo-1491555103944-7c647fd857e6?q=80&w=2070&auto=format&fit=crop"
+                : v,
         },
     },
-    price: {
-        type: Number,
-    },
-        location: String,
-        country: String,
-        reviews: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: 'Review',
-            },
-        ],
+    price: Number,
+    location: String,
+    country: String,
+    reviews: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: 'Review',
+        },
+    ],
 });
 
-listingSchema.post('findOneAndDelete', async(listing) => {
-    if(listing) {
-        await review.deleteMany({ _id: { $in: listing.reviews } });
+listingSchema.post('findOneAndDelete', async (listing) => {
+    if (listing) {
+        await Review.deleteMany({
+            _id: { $in: listing.reviews }
+        });
     }
 });
 
