@@ -132,7 +132,7 @@ body {
 
 /* Show page image/card */
 .show-img {
-    height: 30vh;
+    height: 420px;
     width: 100%;
     object-fit: cover;
     border-radius: 20px;
