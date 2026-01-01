@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
@@ -64,6 +66,7 @@ passport.deserializeUser(User.deserializeUser());
 app.use((req, res, next) => {
     res.locals.success = req.flash("success");
     res.locals.error = req.flash("error");
+    res.locals.currUser = req.user;
     next();
 });
 
@@ -86,7 +89,13 @@ app.all(/.*/, (req, res, next) => {
 });
 
 app.use((err, req, res, next) => {
-    let { statusCode = 500, message = "Something went wrong" } = err;
+    console.log("🔥🔥 REAL ERROR ↓↓↓");
+    console.log(err);
+    console.log("🔥🔥 REAL ERROR ↑↑↑");
+
+    const statusCode = err.statusCode || 500;
+    const message = err.message || "Something went wrong";
+
     res.status(statusCode).render("error.ejs", { message });
 });
 

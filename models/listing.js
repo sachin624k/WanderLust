@@ -3,21 +3,22 @@ const Schema = mongoose.Schema;
 const Review = require('./review.js');
 
 const listingSchema = new Schema({
-    title: { 
+    title: {
         type: String,
         required: true,
     },
     description: String,
     image: {
-        filename: String,
+        filename: {
+            type: String,
+            required: true,
+        },
         url: {
             type: String,
-            default: "https://images.unsplash.com/photo-1491555103944-7c647fd857e6?q=80&w=2070&auto=format&fit=crop",
-            set: (v) => v === "" 
-                ? "https://images.unsplash.com/photo-1491555103944-7c647fd857e6?q=80&w=2070&auto=format&fit=crop"
-                : v,
+            required: true,
         },
     },
+
     price: Number,
     location: String,
     country: String,
@@ -27,6 +28,10 @@ const listingSchema = new Schema({
             ref: 'Review',
         },
     ],
+    owner: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+    },
 });
 
 listingSchema.post('findOneAndDelete', async (listing) => {
