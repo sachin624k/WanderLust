@@ -1,4 +1,5 @@
 require("dotenv").config();
+
 if (!process.env.SESSION_SECRET) {
   throw new Error("SESSION_SECRET is missing or empty");
 }
@@ -10,45 +11,44 @@ const mongoose = require("mongoose");
 const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
-const ExpressError = require("./utils/ExpressError");
+const ExpressError = require("./utils/ExpressError.js");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const flash = require("connect-flash");
 const passport = require("passport");
 const LocalStrategy = require("passport-local");
-const User = require("./models/user");
+const User = require("./models/user.js");
 
-// Routes
-const listingsRouter = require("./routes/listing");
-const reviewRouter = require("./routes/review");
-const userRouter = require("./routes/user");
+const listingsRouter = require("./routes/listing.js");
+const reviewRouter = require("./routes/review.js");
+const userRouter = require("./routes/user.js");
 
-// ================= DATABASE =================
 const dbURL = process.env.ATLASDB_URL;
 
+// Mongo connection
 mongoose
   .connect(dbURL)
-  .then(() => console.log("✅ Connected to MongoDB Atlas"))
-  .catch((err) => console.error("❌ MongoDB Error:", err));
+  .then(() => console.log("Connected to DB"))
+  .catch((err) => console.log(err));
 
-// ================= VIEW ENGINE =================
+// View engine
 app.engine("ejs", ejsMate);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
-// ================= MIDDLEWARE =================
+// Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride("_method"));
 app.use(express.static(path.join(__dirname, "public")));
 
-// ================= SESSION STORE =================
+// Session store
 const store = MongoStore.create({
   mongoUrl: dbURL,
   touchAfter: 24 * 3600,
 });
 
 store.on("error", (err) => {
-  console.error("❌ Session Store Error:", err);
+  console.error("SESSION STORE ERROR", err);
 });
 
 app.use(
@@ -58,22 +58,21 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     },
   })
 );
 
+// Flash & passport
 app.use(flash());
-
-// ================= PASSPORT =================
 app.use(passport.initialize());
 app.use(passport.session());
 passport.use(new LocalStrategy(User.authenticate()));
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
-// ================= GLOBAL LOCALS =================
+// Locals
 app.use((req, res, next) => {
   res.locals.success = req.flash("success");
   res.locals.error = req.flash("error");
@@ -81,29 +80,29 @@ app.use((req, res, next) => {
   next();
 });
 
-// ================= ROUTES =================
+// Root
 app.get("/", (req, res) => {
   res.redirect("/listings");
 });
 
+// Routes
 app.use("/listings", listingsRouter);
 app.use("/listings/:id/reviews", reviewRouter);
 app.use("/", userRouter);
 
-// ================= 404 HANDLER =================
-app.all("*", (req, res, next) => {
+// ❗ FIXED 404 HANDLER (NO '*')
+app.use((req, res, next) => {
   next(new ExpressError(404, "Page Not Found"));
 });
 
-// ================= ERROR HANDLER =================
+// Error handler
 app.use((err, req, res, next) => {
-  console.error("🔥 REAL ERROR:", err);
   const statusCode = err.statusCode || 500;
   const message = err.message || "Something went wrong";
-  res.status(statusCode).render("error", { message });
+  res.status(statusCode).render("error.ejs", { message });
 });
 
-// ================= SERVER =================
+// Server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log("Listening on port", PORT);
 });
