@@ -1,86 +1,148 @@
 const Listing = require("../models/listing");
 const mbxGeocoding = require("@mapbox/mapbox-sdk/services/geocoding");
-const mapToken = process.env.MAP_TOKEN;
-const geocodingClient = mbxGeocoding({ accessToken: mapToken });
 
+const geocodingClient = mbxGeocoding({
+  accessToken: process.env.MAP_TOKEN,
+});
+
+/* =========================
+   INDEX + SEARCH + CATEGORY
+========================= */
 module.exports.index = async (req, res) => {
-    const allListings = await Listing.find({});
-    res.render("listings/index.ejs", { allListings });
-}
+  const { category, q } = req.query;
+  let query = {};
 
-module.exports.renderNewForm = (req, res) => {
-    res.render("listings/new.ejs");
-}
+  // Category filter
+  if (category) {
+    query.category = category;
+  }
 
+  // Search by title or location
+  if (q) {
+    query.$or = [
+      { title: { $regex: q, $options: "i" } },
+      { location: { $regex: q, $options: "i" } },
+    ];
+  }
+
+  const allListings = await Listing.find(query);
+  res.render("listings/index", { allListings, category });
+};
+
+/* =========================
+   SHOW LISTING
+========================= */
 module.exports.showListing = async (req, res) => {
-    let { id } = req.params;
-    const listing = await Listing.findById(id)
-        .populate({
-            path: "reviews",
-            populate: {
-                path: "author",
-            },
-        })
-        .populate("owner");
-    if (!listing) {
-        req.flash("error", "Listing not found!");
-        res.redirect("/listings");
-    }
-    res.render("listings/show.ejs", { listing });
-}
+  const listing = await Listing.findById(req.params.id)
+    .populate({ path: "reviews", populate: { path: "author" } })
+    .populate("owner");
 
+  if (!listing) {
+    req.flash("error", "Listing not found");
+    return res.redirect("/listings");
+  }
+
+  res.render("listings/show", { listing });
+};
+
+/* =========================
+   NEW LISTING FORM
+========================= */
+module.exports.renderNewForm = (req, res) => {
+  res.render("listings/new");
+};
+
+/* =========================
+   CREATE LISTING  ✅ FIXED
+========================= */
 module.exports.createListing = async (req, res) => {
-    let respone = await geocodingClient.forwardGeocode({
-        query: req.body.listing.location,
-        limit: 1
+  const { location, country } = req.body.listing;
+
+  // 🚨 FORCE DETAILED LOCATION (CITY + STATE + COUNTRY)
+  const searchText = `${location}, ${country || "India"}`;
+
+  const geoResponse = await geocodingClient
+    .forwardGeocode({
+      query: searchText,
+      limit: 1,
+      countries: ["IN"],
+      language: ["en"],
     })
-        .send();
+    .send();
 
-    let url = req.file.path;
-    let filename = req.file.filename;
-    const newListing = new Listing(req.body.listing);
-    newListing.owner = req.user._id;
-    newListing.image = { url, filename };
+  // ❌ Safety check
+  if (!geoResponse.body.features.length) {
+    req.flash("error", "Please enter a specific city or place name");
+    return res.redirect("/listings/new");
+  }
 
-    newListing.geometry = respone.body.features[0].geometry;
+  const listing = new Listing(req.body.listing);
+  listing.owner = req.user._id;
 
-    let savedListing = await newListing.save();
-    console.log(savedListing);
-    req.flash("success", "Successfully created a new listing!");
-    res.redirect("/listings");
+  listing.image = {
+    url: req.file.path,
+    filename: req.file.filename,
+  };
+
+  listing.geometry = geoResponse.body.features[0].geometry;
+
+  await listing.save();
+  req.flash("success", "Listing created successfully!");
+  res.redirect("/listings");
 };
 
+
+/* =========================
+   EDIT FORM  ✅ FIXED
+========================= */
 module.exports.renderEditForm = async (req, res) => {
-    let { id } = req.params;
-    const listing = await Listing.findById(id);
-    if (!listing) {
-        req.flash("error", "Listing not found!");
-        res.redirect("/listings");
-    }
+  const listing = await Listing.findById(req.params.id);
 
-    let originalImageUrl = listing.image.url;
-    originalImageUrl = originalImageUrl.replace("/upload", "/upload/w_250");
-    res.render("listings/edit.ejs", { listing, originalImageUrl });
-}
+  if (!listing) {
+    req.flash("error", "Listing not found");
+    return res.redirect("/listings");
+  }
 
-module.exports.updateListing = async (req, res) => {
-    let { id } = req.params;
-    let listing = await Listing.findByIdAndUpdate(id, { ...req.body.listing });
+  const originalImageUrl = listing.image.url.replace(
+    "/upload",
+    "/upload/w_300"
+  );
 
-    if (typeof req.file !== "undefined") {
-        let url = req.file.path;
-        let filename = req.file.filename;
-        listing.image = { url, filename };
-        await listing.save();
-    }
-    req.flash("success", "Listing Updated!");
-    res.redirect(`/listings/${id}`);
+  res.render("listings/edit", { listing, originalImageUrl });
 };
 
+/* =========================
+   UPDATE LISTING
+========================= */
+module.exports.updateListing = async (req, res) => {
+  const listing = await Listing.findByIdAndUpdate(
+    req.params.id,
+    req.body.listing,
+    { new: true }
+  );
+
+  if (!listing) {
+    req.flash("error", "Listing not found");
+    return res.redirect("/listings");
+  }
+
+  if (req.file) {
+    listing.image = {
+      url: req.file.path,
+      filename: req.file.filename,
+    };
+    await listing.save();
+  }
+
+  req.flash("success", "Listing updated successfully!");
+  res.redirect(`/listings/${listing._id}`);
+};
+
+/* =========================
+   DELETE LISTING
+========================= */
 module.exports.destroyListing = async (req, res) => {
-    let { id } = req.params;
-    let deletedListing = await Listing.findByIdAndDelete(id);
-    console.log(deletedListing);
-    req.flash("success", "Successfully deleted the listing!");
-    res.redirect("/listings");
-}
+  await Listing.findByIdAndDelete(req.params.id);
+  req.flash("success", "Listing deleted");
+  res.redirect("/listings");
+};
